@@ -13,26 +13,30 @@ const rooms = {};
 io.on('connection', (socket) => {
     console.log('Bir kullanıcı bağlandı:', socket.id);
 
-    socket.on('getRooms', () => {
-        socket.emit('roomList', Object.keys(rooms).map(name => ({
+    // Aktif odaları listeleme fonksiyonu
+    function sendRoomList(targetSocket = io) {
+        const list = Object.keys(rooms).map(name => ({
             name,
             players: rooms[name].players.length,
-            started: rooms[name].started
-        })));
+            started: rooms[name].started,
+            hasPassword: rooms[name].password ? true : false
+        }));
+        targetSocket.emit('roomList', list);
+    }
+
+    socket.on('getRooms', () => {
+        sendRoomList(socket);
     });
 
     socket.on('createRoom', ({ roomName, password }) => {
+        if (!roomName) return;
         if (rooms[roomName]) {
             socket.emit('errorMsg', 'Bu oda zaten mevcut!');
             return;
         }
-        rooms[roomName] = { password, players: [], started: false, state: {} };
-        io.emit('roomList', Object.keys(rooms).map(name => ({
-            name,
-            players: rooms[name].players.length,
-            started: rooms[name].started
-        })));
-        socket.emit('roomCreated', roomName);
+        rooms[roomName] = { password: password || "", players: [], started: false };
+        socket.emit('roomCreated', { roomName, password: password || "" });
+        sendRoomList();
     });
 
     socket.on('joinRoom', ({ roomName, password, username, color }) => {
@@ -55,30 +59,27 @@ io.on('connection', (socket) => {
         }
 
         socket.join(roomName);
+        socket.roomName = roomName;
+
         const playerObj = {
             id: socket.id,
-            username: username || 'Oyuncu',
+            username: username || 'Savaşçı',
             color: color || '#00ffcc',
-            x: 100 + (room.players.length * 150),
+            x: 100 + (room.players.length * 180),
             y: 300,
             hp: 100,
             score: 0
         };
+        
         room.players.push(playerObj);
-        socket.roomName = roomName;
-
         io.to(roomName).emit('roomData', room.players);
-        io.emit('roomList', Object.keys(rooms).map(name => ({
-            name,
-            players: rooms[name].players.length,
-            started: rooms[name].started
-        })));
+        sendRoomList();
     });
 
     socket.on('chatMessage', (msg) => {
-        if (socket.roomName) {
+        if (socket.roomName && rooms[socket.roomName]) {
             const room = rooms[socket.roomName];
-            const player = room?.players.find(p => p.id === socket.id);
+            const player = room.players.find(p => p.id === socket.id);
             const sender = player ? player.username : 'Sistem';
             io.to(socket.roomName).emit('newChatMessage', { sender, msg });
         }
@@ -89,11 +90,7 @@ io.on('connection', (socket) => {
         if (rooms[roomName]) {
             rooms[roomName].started = true;
             io.to(roomName).emit('gameStarted');
-            io.emit('roomList', Object.keys(rooms).map(name => ({
-                name,
-                players: rooms[name].players.length,
-                started: rooms[name].started
-            })));
+            sendRoomList();
         }
     });
 
@@ -131,9 +128,17 @@ io.on('connection', (socket) => {
                 if (alivePlayers.length <= 1 && room.players.length > 1) {
                     const winner = alivePlayers[0] ? alivePlayers[0].username : 'Kimse';
                     io.to(socket.roomName).emit('gameOver', { winner });
-                    // Odayı sıfırla
+                    
+                    // Oyun bittiğinde odayı ve oyuncu canlarını temizle
                     room.started = false;
-                    room.players.forEach(p => { p.hp = 100; p.x = 200; p.y = 300; });
+                    room.players.forEach((p, index) => { 
+                        p.hp = 100; 
+                        p.x = 100 + (index * 180); 
+                        p.y = 300; 
+                    });
+                    setTimeout(() => {
+                        io.to(socket.roomName).emit('roomData', room.players);
+                    }, 3100);
                 }
             }
         }
@@ -151,20 +156,15 @@ io.on('connection', (socket) => {
                     const alive = room.players.filter(p => p.hp > 0)[0];
                     io.to(socket.roomName).emit('gameOver', { winner: alive ? alive.username : 'Kimse' });
                     room.started = false;
-                    room.players.forEach(p => p.hp = 100);
+                    room.players.forEach((p, idx) => { p.hp = 100; p.x = 100 + (idx * 180); p.y = 300; });
                 }
             }
-            io.emit('roomList', Object.keys(rooms).map(name => ({
-                name,
-                players: rooms[name].players.length,
-                started: rooms[name].started
-            })));
+            sendRoomList();
         }
-        console.log('Bir kullanıcı ayrıldı:', socket.id);
     });
 });
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
-    console.log(`Oyun sunucusu hazır! Port: ${PORT}`);
+    console.log(`Sunucu aktif port: ${PORT}`);
 });
