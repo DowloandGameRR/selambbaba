@@ -1,340 +1,314 @@
-const socket = io(window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin);
+// Sunucu adresi kontrolü: Localhost ise yerel sunucuya, değilse Render linkine otomatik yönlenir.
+const socket = io(window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://RENDER_SUNUCU_LINKINIZI_BURAYA_KOYUN.onrender.com'); 
 
-// Ekran Görünüm Yönetimleri
-const nameScreen = document.getElementById('nameScreen');
-const loginScreen = document.getElementById('loginScreen');
-const lobbyScreen = document.getElementById('lobbyScreen');
-const gameScreen = document.getElementById('gameScreen');
-const chatWrapper = document.getElementById('chatWrapper');
-const gameOverScreen = document.getElementById('gameOverScreen');
-const settingsModal = document.getElementById('settingsModal');
+// Ekranlar
+const nameScreen = document.getElementById('name-screen');
+const menuScreen = document.getElementById('menu-screen');
+const lobbyScreen = document.getElementById('lobby-screen');
+const victoryScreen = document.getElementById('victory-screen');
+const canvas = document.getElementById('gameCanvas');
+const leaderboard = document.getElementById('leaderboard');
+const gameTimerDiv = document.getElementById('game-timer');
 
-// Elementler
-const usernameInput = document.getElementById('usernameInput');
-const saveNameBtn = document.getElementById('saveNameBtn');
-const newRoomName = document.getElementById('newRoomName');
-const newRoomPass = document.getElementById('newRoomPass');
-const createRoomBtn = document.getElementById('createRoomBtn');
-const roomListContainer = document.getElementById('roomListContainer');
-const playerList = document.getElementById('playerList');
-const startGameBtn = document.getElementById('startGameBtn');
-const leaveRoomBtn = document.getElementById('leaveRoomBtn');
-const lobbyTitle = document.getElementById('lobbyTitle');
-const winnerText = document.getElementById('winnerText');
+const usernameInput = document.getElementById('username-input');
+const saveNameBtn = document.getElementById('save-name-btn');
+const helloUsername = document.getElementById('hello-username');
+const roomNameInput = document.getElementById('room-name');
+const isPrivateCheck = document.getElementById('is-private');
+const passwordWrapper = document.getElementById('password-wrapper');
+const roomPassInput = document.getElementById('room-pass');
+const createBtn = document.getElementById('create-btn');
+const roomListDiv = document.getElementById('room-list');
 
-// Ayarlar
-const settingsBtn = document.getElementById('settingsBtn');
-const closeModal = document.querySelector('.close-modal');
-const settingVolume = document.getElementById('settingVolume');
-const settingColor = document.getElementById('settingColor');
+// Lobi Elemanları
+const lobbyTitle = document.getElementById('lobby-title');
+const lobbyPlayersDiv = document.getElementById('lobby-players');
+const mapSizeInput = document.getElementById('map-size-input');
+const playerSpeedSelect = document.getElementById('player-speed-select');
+const gameDurationSelect = document.getElementById('game-duration-select');
+const startBtn = document.getElementById('start-game-btn');
+const waitMsg = document.getElementById('wait-msg');
+const scoresDiv = document.getElementById('scores');
+const winnerNameBox = document.getElementById('winner-name-box');
+const winnerKillsBox = document.getElementById('winner-kills-box');
+const returnMenuBtn = document.getElementById('return-menu-btn');
 
-// Değişkenler
-let myUsername = "";
-let currentRoom = null;
-let myId = null;
+const ctx = canvas.getContext('2d');
+
 let players = {};
 let bullets = [];
-let keys = {};
-let isMuted = false;
-let mySelectedColor = '#00ffcc';
+let currentMapSize = 2000; 
+let keys = { w: false, a: false, s: false, d: false };
+let starParticles = [];
+let isGameActive = false;
+let myUsername = ""; 
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-let localPlayer = { x: 200, y: 300, speed: 4 };
+canvas.width = window.innerWidth * 0.9;
+canvas.height = window.innerHeight * 0.9;
 
-socket.on('connect', () => { myId = socket.id; });
-
-// --- 1. ADIM: İSİM GİRİŞ KONTROLÜ ---
 saveNameBtn.addEventListener('click', () => {
-    const name = usernameInput.value.trim();
-    if (!name) {
-        alert('Oyuna girmek için bir kullanıcı adı yazmalısınız!');
-        return;
-    }
-    myUsername = name;
-    nameScreen.classList.add('hidden');
-    loginScreen.classList.remove('hidden');
+    let name = usernameInput.value.trim();
+    if (!name) return alert("Karakter ismi girin!");
+    myUsername = name; 
     
-    // İsmi onayladıktan sonra lobi listesini çekmeye başla
+    nameScreen.style.display = 'none';
+    menuScreen.style.display = 'block';
+    helloUsername.innerText = myUsername.toUpperCase();
     socket.emit('getRooms');
-    setInterval(() => {
-        if (!loginScreen.classList.contains('hidden')) socket.emit('getRooms');
-    }, 2000);
 });
 
-// --- 2. ADIM: ODA YÖNETİMİ ---
-createRoomBtn.addEventListener('click', () => {
-    const roomName = newRoomName.value.trim();
-    const password = newRoomPass.value;
-    if (!roomName) return alert('Lütfen bir oda adı girin!');
-    socket.emit('createRoom', { roomName, password });
+isPrivateCheck.addEventListener('change', (e) => {
+    passwordWrapper.style.display = e.target.checked ? 'block' : 'none';
 });
 
-socket.on('roomCreated', (data) => {
-    // Kurulan odaya otomatik bağlan
-    currentRoom = data.roomName;
-    socket.emit('joinRoom', { roomName: data.roomName, password: data.password, username: myUsername, color: mySelectedColor });
+createBtn.addEventListener('click', () => {
+    let rName = roomNameInput.value.trim();
+    if (!rName) return alert("Oda adı girilmeli!");
+    socket.emit('createRoom', { roomName: rName, isPrivate: isPrivateCheck.checked, password: roomPassInput.value });
 });
 
-function joinTheRoom(roomName, password) {
-    currentRoom = roomName;
-    socket.emit('joinRoom', { roomName, password, username: myUsername, color: mySelectedColor });
-}
+socket.on('roomCreated', (roomId) => {
+    socket.emit('joinRoom', { roomId: roomId, username: myUsername, password: roomPassInput.value });
+});
 
-socket.on('roomList', (rooms) => {
-    roomListContainer.innerHTML = '';
-    if (rooms.length === 0) {
-        roomListContainer.innerHTML = '<p class="empty-text">Aktif oda bulunamadı.</p>';
+socket.on('roomListUpdate', (rooms) => {
+    roomListDiv.innerHTML = '';
+    let available = rooms.filter(r => !r.started);
+    if(available.length === 0) {
+        roomListDiv.innerHTML = '<p style="color:#555;font-size:13px;margin-top:10px;">Aktif turnuva odası yok.</p>';
         return;
     }
-    rooms.forEach(room => {
-        const div = document.createElement('div');
-        div.className = 'room-item';
-        div.innerHTML = `<span><b>${room.name}</b> (${room.players}/4) ${room.hasPassword ? '🔒' : ''}</span>`;
-        
-        const btn = document.createElement('button');
-        btn.innerText = room.started ? 'İzle' : 'Katıl';
-        btn.className = 'btn btn-primary';
-        btn.style.width = '75px';
-        btn.style.padding = '4px';
-        btn.onclick = () => {
-            let pass = "";
-            if (room.hasPassword && !room.started) {
-                pass = prompt('Oda şifresini giriniz:');
-                if (pass === null) return;
-            }
-            joinTheRoom(room.name, pass);
-        };
-        div.appendChild(btn);
-        roomListContainer.appendChild(div);
+    available.forEach(room => {
+        let lock = room.isPrivate ? "🔒 " : "🌐 ";
+        roomListDiv.innerHTML += `
+            <div class="room-item">
+                <span>${lock}<b>${room.name}</b> (${room.playerCount} Oyuncu)</span>
+                <button onclick="checkAndJoin('${room.id}', ${room.isPrivate})">Katıl</button>
+            </div>
+        `;
     });
 });
 
-socket.on('roomData', (serverPlayers) => {
-    loginScreen.classList.add('hidden');
-    lobbyScreen.classList.remove('hidden');
-    chatWrapper.classList.remove('hidden');
-    lobbyTitle.innerText = `ODA: ${currentRoom}`;
+window.checkAndJoin = function(roomId, isPrivate) {
+    let pass = "";
+    if (isPrivate) {
+        pass = prompt("Turnuva odası şifresini yazın:");
+        if (pass === null) return;
+    }
+    socket.emit('joinRoom', { roomId, username: myUsername, password: pass });
+};
+
+socket.on('lobbyUpdate', (data) => {
+    menuScreen.style.display = 'none';
+    lobbyScreen.style.display = 'block';
+    lobbyTitle.innerText = "Oda: " + data.roomName;
+    lobbyPlayersDiv.innerHTML = '';
     
-    playerList.innerHTML = '';
-    players = {};
-    
-    serverPlayers.forEach(p => {
-        players[p.id] = p;
-        const div = document.createElement('div');
-        div.className = 'player-card';
-        div.style.borderLeft = `4px solid ${p.color}`;
-        div.innerText = `${p.username} ${p.id === myId ? '(Sen)' : ''}`;
-        playerList.appendChild(div);
+    Object.values(data.players).forEach(p => {
+        let tag = p.id === data.hostId ? " [ODA SAHİBİ]" : "";
+        lobbyPlayersDiv.innerHTML += `<div class="lobby-player" style="color:${p.color}">${p.username}${tag}</div>`;
     });
 
-    if (serverPlayers[0] && serverPlayers[0].id === myId) {
-        startGameBtn.classList.remove('hidden');
+    if (socket.id === data.hostId) {
+        mapSizeInput.disabled = false;
+        playerSpeedSelect.disabled = false;
+        gameDurationSelect.disabled = false;
+        startBtn.style.display = 'inline-block';
+        waitMsg.style.display = 'none';
     } else {
-        startGameBtn.classList.add('hidden');
+        mapSizeInput.disabled = true;
+        playerSpeedSelect.disabled = true;
+        gameDurationSelect.disabled = true;
+        mapSizeInput.value = data.mapSize;
+        playerSpeedSelect.value = data.playerSpeed;
+        gameDurationSelect.value = data.gameDuration;
     }
 });
 
-socket.on('errorMsg', (msg) => alert(msg));
-leaveRoomBtn.addEventListener('click', () => { location.reload(); });
+function sendSettings() {
+    socket.emit('updateLobbySettings', {
+        mapSize: mapSizeInput.value,
+        playerSpeed: playerSpeedSelect.value,
+        gameDuration: gameDurationSelect.value
+    });
+}
+mapSizeInput.addEventListener('input', sendSettings);
+playerSpeedSelect.addEventListener('change', sendSettings);
+gameDurationSelect.addEventListener('change', sendSettings);
 
-// --- 3. ADIM: CHAT SİSTEMİ ---
-const chatInput = document.getElementById('chatInput');
-const chatBox = document.getElementById('chatBox');
+socket.on('settingsUpdated', (data) => {
+    mapSizeInput.value = data.mapSize;
+    playerSpeedSelect.value = data.playerSpeed;
+    gameDurationSelect.value = data.gameDuration;
+});
 
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        if (document.activeElement === chatInput) {
-            const message = chatInput.value.trim();
-            if (message) socket.emit('chatMessage', message);
-            chatInput.value = '';
-            chatInput.blur();
-        } else {
-            if (!chatWrapper.classList.contains('hidden')) chatInput.focus();
-        }
+startBtn.addEventListener('click', () => { socket.emit('startGame'); });
+
+socket.on('gameStarted', (data) => {
+    lobbyScreen.style.display = 'none';
+    canvas.style.display = 'block';
+    leaderboard.style.display = 'block';
+    gameTimerDiv.style.display = 'block';
+    players = data.players;
+    currentMapSize = data.mapSize;
+    isGameActive = true;
+
+    starParticles = [];
+    let count = 200; 
+    for(let i=0; i<count; i++) {
+        starParticles.push({
+            x: Math.random() * currentMapSize,
+            y: Math.random() * currentMapSize,
+            size: Math.random() * 2 + 1,
+            alpha: Math.random() * 0.6 + 0.2,
+            speed: Math.random() * 0.4 + 0.1
+        });
     }
-});
 
-socket.on('newChatMessage', (data) => {
-    const msgElement = document.createElement('div');
-    msgElement.innerHTML = `<span class="sender">${data.sender}:</span> ${data.msg}`;
-    chatBox.appendChild(msgElement);
-    chatBox.scrollTop = chatBox.scrollHeight;
-});
-
-// --- 4. ADIM: AYARLAR PANELİ ---
-settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
-closeModal.addEventListener('click', () => settingsModal.classList.add('hidden'));
-settingVolume.addEventListener('click', () => {
-    isMuted = !isMuted;
-    settingVolume.innerText = isMuted ? 'Kapalı (Unmute)' : 'Açık (Mute)';
-    settingVolume.className = isMuted ? 'btn btn-danger' : 'btn btn-secondary';
-});
-settingColor.addEventListener('change', (e) => {
-    mySelectedColor = e.target.value;
-    if (players[myId]) players[myId].color = mySelectedColor;
-});
-
-// --- 5. ADIM: OYUN DÖNGÜSÜ VE MEKANİKLER ---
-startGameBtn.addEventListener('click', () => socket.emit('startGame'));
-
-socket.on('gameStarted', () => {
-    lobbyScreen.classList.add('hidden');
-    gameScreen.classList.remove('hidden');
-    if (players[myId]) {
-        localPlayer.x = players[myId].x;
-        localPlayer.y = players[myId].y;
-    }
-    bullets = [];
+    updateLeaderboard();
     animate();
 });
 
+socket.on('timerUpdate', (timeLeft) => {
+    let minutes = Math.floor(timeLeft / 60);
+    let seconds = timeLeft % 60;
+    gameTimerDiv.innerText = `KALAN SÜRE: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+});
+
+socket.on('matchEnded', (data) => {
+    isGameActive = false;
+    winnerNameBox.innerText = data.winnerName;
+    winnerNameBox.style.color = data.winnerColor;
+    winnerKillsBox.innerText = `${data.winnerKills} Leş Alarak Arenanın Hakimi Oldu!`;
+    victoryScreen.style.display = 'flex';
+});
+
+// İSİM SIFIRLAMADAN DOĞRUDAN LOBİ MENÜSÜNE GERİ DÖNME TETİKLEYİCİSİ
+returnMenuBtn.addEventListener('click', () => {
+    victoryScreen.style.display = 'none';
+    canvas.style.display = 'none';
+    leaderboard.style.display = 'none';
+    gameTimerDiv.style.display = 'none';
+    
+    menuScreen.style.display = 'block';
+    
+    roomNameInput.value = "";
+    roomPassInput.value = "";
+    isPrivateCheck.checked = false;
+    passwordWrapper.style.display = 'none';
+    socket.emit('getRooms');
+});
+
 window.addEventListener('keydown', (e) => {
-    if (document.activeElement === chatInput) return;
-    keys[e.key.toLowerCase()] = true;
-    if (e.key === ' ' || e.code === 'Space') shootBullet();
+    let key = e.key.toLowerCase();
+    if (['w', 'a', 's', 'd'].includes(key)) keys[key] = true;
 });
 window.addEventListener('keyup', (e) => {
-    if (document.activeElement === chatInput) return;
-    keys[e.key.toLowerCase()] = false;
+    let key = e.key.toLowerCase();
+    if (['w', 'a', 's', 'd'].includes(key)) keys[key] = false;
 });
 
-function shootBullet() {
-    if (!players[myId] || players[myId].hp <= 0) return;
-    
-    let angle = 0;
-    if (keys['w'] || keys['arrowup']) angle = -Math.PI / 2;
-    else if (keys['s'] || keys['arrowdown']) angle = Math.PI / 2;
-    else if (keys['a'] || keys['arrowleft']) angle = Math.PI;
-    else if (keys['d'] || keys['arrowright']) angle = 0;
-    else angle = 0;
-
-    const bulletData = {
-        x: localPlayer.x,
-        y: localPlayer.y,
-        vx: Math.cos(angle) * 8,
-        vy: Math.sin(angle) * 8
-    };
-    bullets.push({ ...bulletData, owner: myId });
-    socket.emit('fireBullet', bulletData);
-}
-
-socket.on('bulletSpawned', (bData) => { bullets.push(bData); });
-socket.on('playerUpdated', (sPlayer) => {
-    if (players[sPlayer.id]) {
-        players[sPlayer.id].x = sPlayer.x;
-        players[sPlayer.id].y = sPlayer.y;
-    }
+let mouseX = 0, mouseY = 0;
+window.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
 });
 
-function update() {
-    if (!players[myId] || players[myId].hp <= 0) return;
+window.addEventListener('mousedown', () => {
+    if (!players[socket.id] || !isGameActive) return;
+    let dirX = mouseX - canvas.width / 2;
+    let dirY = mouseY - canvas.height / 2;
+    let len = Math.sqrt(dirX*dirX + dirY*dirY);
+    if (len > 0) socket.emit('shoot', { dirX: dirX / len, dirY: dirY / len });
+});
 
-    let moved = false;
-    if (keys['w'] || keys['arrowup']) { localPlayer.y -= localPlayer.speed; moved = true; }
-    if (keys['s'] || keys['arrowdown']) { localPlayer.y += localPlayer.speed; moved = true; }
-    if (keys['a'] || keys['arrowleft']) { localPlayer.x -= localPlayer.speed; moved = true; }
-    if (keys['d'] || keys['arrowright']) { localPlayer.x += localPlayer.speed; moved = true; }
+socket.on('playerMoved', (p) => { if(players[p.id]) { players[p.id].x = p.x; players[p.id].y = p.y; } });
+socket.on('updateBullets', (bList) => { bullets = bList; });
+socket.on('updateAllPlayers', (pList) => { players = pList; updateLeaderboard(); });
+socket.on('playerDisconnected', (id) => { delete players[id]; updateLeaderboard(); });
+socket.on('errorMsg', (msg) => alert(msg));
 
-    if (localPlayer.x < 20) localPlayer.x = 20;
-    if (localPlayer.x > canvas.width - 20) localPlayer.x = canvas.width - 20;
-    if (localPlayer.y < 20) localPlayer.y = 20;
-    if (localPlayer.y > canvas.height - 20) localPlayer.y = canvas.height - 20;
-
-    if (moved) {
-        players[myId].x = localPlayer.x;
-        players[myId].y = localPlayer.y;
-        socket.emit('playerMove', { x: localPlayer.x, y: localPlayer.y });
-    }
-
-    for (let i = bullets.length - 1; i >= 0; i--) {
-        let b = bullets[i];
-        b.x += b.vx;
-        b.y += b.vy;
-
-        if (b.owner === myId) {
-            Object.keys(players).forEach(pId => {
-                if (pId !== myId && players[pId].hp > 0) {
-                    let dist = Math.hypot(b.x - players[pId].x, b.y - players[pId].y);
-                    if (dist < 22) {
-                        socket.emit('bulletHit', { targetId: pId });
-                        bullets.splice(i, 1);
-                        return;
-                    }
-                }
-            });
-        }
-
-        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
-            bullets.splice(i, 1);
-        }
-    }
-}
-
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Sade Arka Plan Izgarası
-    ctx.strokeStyle = '#161625';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < canvas.width; x += 50) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += 50) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-    }
-
-    const scoreList = [];
-    Object.keys(players).forEach(id => {
-        const p = players[id];
-        scoreList.push(`${p.username}: ${p.score} Kills`);
-        if (p.hp <= 0) return;
-
-        // Karakter (Mat Daire)
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.fill();
-
-        // Can Barı Göstergesi
-        ctx.fillStyle = '#441122';
-        ctx.fillRect(p.x - 22, p.y - 30, 44, 5);
-        ctx.fillStyle = '#00aa55';
-        ctx.fillRect(p.x - 22, p.y - 30, (p.hp / 100) * 44, 5);
-
-        // İsimlik
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '11px Orbitron';
-        ctx.textAlign = 'center';
-        ctx.fillText(p.username, p.x, p.y - 36);
-    });
-
-    document.getElementById('scoreBoard').innerHTML = `<b>📊 SKOR TABLOSU</b><br>${scoreList.join('<br>')}`;
-
-    // Mermiler
-    bullets.forEach(b => {
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffcc00';
-        ctx.fill();
+function updateLeaderboard() {
+    scoresDiv.innerHTML = '';
+    let sorted = Object.values(players).sort((a,b) => b.kills - a.kills).slice(0, 5);
+    sorted.forEach(p => {
+        scoresDiv.innerHTML += `<div class="score-row"><span>${p.username}</span><span style="color:#00ffc8">${p.kills} Leş</span></div>`;
     });
 }
 
+let camX = 0, camY = 0;
 function animate() {
-    if (gameScreen.classList.contains('hidden')) return;
-    update();
-    draw();
+    if (!players[socket.id] || !isGameActive) return;
+
+    if (keys.w || keys.a || keys.s || keys.d) {
+        socket.emit('playerMove', keys);
+    }
+
+    let me = players[socket.id];
+    let targetCamX = me.x - canvas.width / 2;
+    let targetCamY = me.y - canvas.height / 2;
+    camX += (targetCamX - camX) * 0.08; 
+    camY += (targetCamY - camY) * 0.08;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(-camX, -camY);
+
+    ctx.strokeStyle = '#10101e'; ctx.lineWidth = 1;
+    let startX = Math.floor(camX / 80) * 80;
+    let startY = Math.floor(camY / 80) * 80;
+    for (let x = Math.max(0, startX); x <= Math.min(currentMapSize, startX + canvas.width + 160); x += 80) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, currentMapSize); ctx.stroke();
+    }
+    for (let y = Math.max(0, startY); y <= Math.min(currentMapSize, startY + canvas.height + 160); y += 80) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(currentMapSize, y); ctx.stroke();
+    }
+
+    starParticles.forEach(star => {
+        star.y += star.speed;
+        if (star.y > currentMapSize) star.y = 0;
+        ctx.beginPath(); ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(0, 255, 200, ${star.alpha})`; ctx.fill();
+    });
+
+    bullets.forEach(b => {
+        ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff4757'; ctx.fill(); ctx.closePath();
+    });
+
+    Object.keys(players).forEach(id => {
+        let p = players[id];
+        ctx.beginPath(); ctx.arc(p.x, p.y, 30, 0, Math.PI * 2);
+        ctx.fillStyle = p.color; ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = id === socket.id ? '#00ffc8' : '#ffffff';
+        ctx.stroke(); ctx.closePath();
+
+        ctx.fillStyle = '#222'; ctx.fillRect(p.x - 25, p.y - 45, 50, 6);
+        ctx.fillStyle = p.hp > 40 ? '#00ffc8' : '#ff4757';
+        ctx.fillRect(p.x - 25, p.y - 45, (p.hp / 100) * 50, 6);
+
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center';
+        ctx.fillText(p.username, p.x, p.y - 65);
+    });
+
+    ctx.restore();
+
+    let miniSize = 150; 
+    let miniX = canvas.width - miniSize - 20;
+    let miniY = canvas.height - miniSize - 20;
+
+    ctx.fillStyle = 'rgba(8, 8, 15, 0.8)'; ctx.fillRect(miniX, miniY, miniSize, miniSize);
+    ctx.strokeStyle = '#00ffc8'; ctx.lineWidth = 2; ctx.strokeRect(miniX, miniY, miniSize, miniSize);
+
+    Object.keys(players).forEach(id => {
+        let p = players[id];
+        let pMiniX = miniX + (p.x / currentMapSize) * miniSize;
+        let pMiniY = miniY + (p.y / currentMapSize) * miniSize;
+
+        ctx.beginPath(); ctx.arc(pMiniX, pMiniY, id === socket.id ? 4 : 3, 0, Math.PI * 2);
+        ctx.fillStyle = id === socket.id ? '#00ffc8' : '#ff4757'; ctx.fill(); ctx.closePath();
+    });
+
     requestAnimationFrame(animate);
 }
-
-// --- 6. ADIM: MAÇ BİTİŞİ VE OTOMATİK LOBİYE DÖNÜŞ ---
-socket.on('gameOver', (data) => {
-    winnerText.innerText = `KAZANAN: ${data.winner.toUpperCase()}`;
-    gameOverScreen.classList.remove('hidden');
-
-    setTimeout(() => {
-        gameOverScreen.classList.add('hidden');
-        gameScreen.classList.add('hidden');
-        lobbyScreen.classList.remove('hidden');
-    }, 3000);
-});
