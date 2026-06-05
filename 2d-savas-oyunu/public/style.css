@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap');
 
 * {
     box-sizing: border-box;
@@ -9,8 +9,8 @@
 }
 
 body {
-    background: #0a0a12;
-    color: #ffffff;
+    background: #08080d; /* Tamamen loş ve koyu arka plan */
+    color: #e2e2e9;
     overflow: hidden;
     height: 100vh;
     display: flex;
@@ -18,119 +18,101 @@ body {
     align-items: center;
 }
 
-/* Hareketli Arka Plan Efekti */
-.bg-animate {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(circle at 50% 50%, #1a103c 0%, #05050a 100%);
-    z-index: -2;
-}
-
 .container {
     width: 100%;
-    max-width: 900px;
+    max-width: 850px;
     padding: 20px;
-    z-index: 1;
+    z-index: 2;
 }
 
 .hidden { display: none !important; }
 
-/* Neon Başlıklar */
-.neon-text {
+/* Gözü Yormayan Mat Başlıklar */
+h1 {
     text-align: center;
-    font-size: 3rem;
+    font-size: 2.5rem;
     font-weight: 900;
-    color: #00ffcc;
-    text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc, 0 0 40px #004433;
-    margin-bottom: 25px;
-    letter-spacing: 4px;
+    color: #00ccaa; /* Aşırı parlamayan yumuşak tırkaz */
+    margin-bottom: 20px;
+    letter-spacing: 3px;
 }
 
-.neon-text-red {
-    text-align: center;
-    font-size: 3.5rem;
-    font-weight: 900;
-    color: #ff0055;
-    text-shadow: 0 0 10px #ff0055, 0 0 20px #ff0055;
-    margin-bottom: 15px;
+h3 {
+    margin-bottom: 12px;
+    color: #00ccaa;
+    font-size: 1rem;
+    border-bottom: 1px solid rgba(0, 204, 170, 0.2);
+    padding-bottom: 6px;
 }
 
-/* Modern Cam Kart Yapısı */
+/* Mat Koyu Kart Tasarımı */
 .card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(12px);
-    border-radius: 16px;
-    padding: 30px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    background: #11111b;
+    border: 1px solid #222235;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
 }
 
 .room-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 25px;
-    margin-top: 25px;
+    gap: 20px;
 }
 
 .box {
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(0, 255, 204, 0.2);
-    border-radius: 12px;
-    padding: 20px;
+    background: #161622;
+    border: 1px solid #2a2a3f;
+    border-radius: 8px;
+    padding: 15px;
 }
 
-h3 {
-    margin-bottom: 15px;
-    color: #00ffcc;
-    font-size: 1.1rem;
-    border-bottom: 1px solid rgba(0, 255, 204, 0.2);
-    padding-bottom: 5px;
-}
-
-/* Giriş Elemanları */
+/* Form Elemanları */
 input[type="text"], input[type="password"] {
     width: 100%;
-    padding: 12px 15px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
+    padding: 10px 12px;
+    background: #0c0c14;
+    border: 1px solid #33334c;
+    border-radius: 6px;
     color: #fff;
-    font-size: 0.9rem;
-    margin-bottom: 12px;
-    transition: 0.3s;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
 }
-
 input:focus {
     outline: none;
-    border-color: #00ffcc;
-    box-shadow: 0 0 10px rgba(0,255,204,0.3);
+    border-color: #00ccaa;
 }
 
-/* Butonlar */
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+/* Sade ve Şık Butonlar */
 .btn {
     width: 100%;
-    padding: 12px;
+    padding: 10px;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     font-weight: bold;
     cursor: pointer;
     text-transform: uppercase;
-    transition: 0.2s;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    transition: background 0.2s;
 }
+.btn-primary { background: #00ccaa; color: #08080d; }
+.btn-primary:hover { background: #00aa8d; }
+.btn-success { background: #00aa55; color: #fff; }
+.btn-success:hover { background: #008844; }
+.btn-danger { background: #bb2244; color: #fff; }
+.btn-danger:hover { background: #991133; }
+.btn-secondary { background: #2a2a3f; color: #fff; }
+.btn-secondary:hover { background: #35354f; }
 
-.btn-primary { background: #00ffcc; color: #000; }
-.btn-primary:hover { background: #00ccaa; box-shadow: 0 0 15px rgba(0,255,204,0.4); }
-.btn-success { background: #00ff66; color: #000; }
-.btn-success:hover { background: #00cc55; box-shadow: 0 0 15px rgba(0,255,102,0.4); }
-.id-danger { background: #ff0055; color: #fff; }
-.id-danger:hover { background: #cc0044; box-shadow: 0 0 15px rgba(255,0,85,0.4); }
-.btn-secondary { background: rgba(255,255,255,0.1); color: #fff; }
-
-/* Liste Kutuları */
+/* Liste Kutusu */
 .scroll-box {
-    height: 150px;
+    height: 160px;
     overflow-y: auto;
 }
 
@@ -138,41 +120,42 @@ input:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px;
-    background: rgba(255,255,255,0.02);
-    margin-bottom: 8px;
-    border-radius: 6px;
-    border-left: 3px solid #00ffcc;
+    padding: 8px;
+    background: #0c0c14;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    border-left: 3px solid #00ccaa;
 }
 
-/* Oyuncu Lobi Grid */
 .player-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    margin-bottom: 20px;
+    gap: 10px;
+    margin: 15px 0;
 }
 
 .player-card {
-    background: rgba(255,255,255,0.04);
-    padding: 15px;
-    border-radius: 8px;
+    background: #161622;
+    padding: 12px;
+    border-radius: 6px;
     text-align: center;
-    border: 1px solid rgba(255,255,255,0.1);
-    font-weight: bold;
+    border: 1px solid #2d2d42;
+    font-size: 0.9rem;
 }
 
-/* Canvas Oyun Alanı */
-#gameScreen {
-    position: relative;
+.lobby-controls {
+    display: flex;
+    gap: 10px;
 }
 
+/* Oyun Sahası */
 #gameCanvas {
-    background: #0f0f1a;
-    border: 3px solid #00ffcc;
-    border-radius: 12px;
-    box-shadow: 0 0 30px rgba(0,255,204,0.2);
+    background: #0a0a0f;
+    border: 2px solid #222235;
+    border-radius: 8px;
     display: block;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
 }
 
 #uiContainer {
@@ -183,98 +166,81 @@ input:focus {
 }
 
 #scoreBoard {
-    background: rgba(0,0,0,0.7);
-    padding: 12px 20px;
-    border-radius: 8px;
-    border-left: 4px solid #00ffcc;
-    font-size: 0.9rem;
-    line-height: 1.5;
+    background: rgba(10, 10, 15, 0.85);
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: 1px solid #222235;
+    font-size: 0.8rem;
+    line-height: 1.4;
 }
 
-/* DİŞLİ VE AYARLAR MODAL */
+/* Dişli ve Ayarlar */
 .icon-btn {
     position: absolute;
-    top: 20px;
-    right: 20px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
+    top: 15px;
+    right: 15px;
+    background: #11111b;
+    border: 1px solid #222235;
     color: white;
-    font-size: 1.5rem;
-    padding: 10px;
+    font-size: 1.2rem;
+    padding: 8px;
     border-radius: 50%;
     cursor: pointer;
-    z-index: 10;
-    transition: 0.3s;
-}
-.icon-btn:hover { background: rgba(0,255,204,0.2); border-color: #00ffcc; }
-
-.modal {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.8);
-    display: flex; justify-content: center; align-items: center;
     z-index: 100;
 }
 
+.modal {
+    position: fixed;
+    top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.75);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 200;
+}
 .modal-content {
-    background: #131326;
-    border: 2px solid #00ffcc;
-    padding: 30px;
-    border-radius: 16px;
-    width: 350px;
+    background: #11111b;
+    border: 1px solid #33334c;
+    padding: 25px;
+    border-radius: 12px;
+    width: 320px;
     text-align: center;
     position: relative;
 }
-
 .close-modal {
     position: absolute;
-    top: 10px; right: 15px;
-    font-size: 1.8rem; cursor: pointer; color: #ff0055;
+    top: 8px; right: 12px;
+    font-size: 1.5rem; cursor: pointer; color: #bb2244;
+}
+.setting-item { margin: 15px 0; text-align: left; }
+.setting-item label { display: block; font-size: 0.8rem; margin-bottom: 5px; color: #aaa; }
+input[type="color"] {
+    width: 100%; height: 35px; border: none; background: transparent; cursor: pointer;
 }
 
-.setting-item {
-    margin: 20px 0;
-    text-align: left;
-}
-.setting-item label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #bbb;}
-
-/* ENTEGRE GLOBAL CHAT SİSTEMİ */
+/* Chat Kutusu */
 .chat-wrapper {
     position: fixed;
-    bottom: 20px;
-    left: 20px;
-    width: 320px;
-    background: rgba(5, 5, 10, 0.75);
-    border: 1px solid rgba(255,255,255,0.1);
-    backdrop-filter: blur(8px);
-    border-radius: 10px;
-    z-index: 50;
-    padding: 10px;
+    bottom: 15px;
+    left: 15px;
+    width: 280px;
+    background: rgba(17, 17, 27, 0.85);
+    border: 1px solid #222235;
+    border-radius: 8px;
+    z-index: 90;
+    padding: 8px;
 }
-
 .chat-box {
-    height: 140px;
+    height: 110px;
     overflow-y: auto;
-    font-size: 0.8rem;
-    margin-bottom: 8px;
+    font-size: 0.75rem;
+    margin-bottom: 6px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
 }
+.chat-msg .sender { color: #00ccaa; font-weight: bold; }
+.chat-input-area input { margin-bottom: 0; padding: 6px; font-size: 0.75rem; }
 
-.chat-msg {
-    line-height: 1.3;
-    word-break: break-all;
-}
-.chat-msg .sender { color: #00ffcc; font-weight: bold; }
-
-.chat-input-area input {
-    margin-bottom: 0 !important;
-    padding: 8px 10px !important;
-    font-size: 0.8rem !important;
-}
-
-/* POPUP OVERLAY (Oyun Bitti Pencereleri) */
+/* Popup Bitiş */
 .popup-overlay {
     position: fixed;
     top:0; left:0; width:100%; height:100%;
@@ -283,27 +249,24 @@ input:focus {
     z-index: 999;
 }
 .popup-box {
-    background: #120a1c;
-    border: 2px solid #ff0055;
-    padding: 40px;
-    border-radius: 16px;
+    background: #11111b;
+    border: 1px solid #bb2244;
+    padding: 30px;
+    border-radius: 12px;
     text-align: center;
-    box-shadow: 0 0 30px rgba(255,0,85,0.3);
 }
+#winnerText { color: #bb2244; font-size: 2rem; margin-bottom: 10px; }
 
-/* İMZA ALANLARI */
+/* İmzalar */
 .footer-signature {
     text-align: center;
-    margin-top: 30px;
-    font-size: 0.8rem;
-    color: rgba(255,255,255,0.3);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
-
-.credits-bottom {
-    margin-top: 25px;
+    margin-top: 20px;
     font-size: 0.75rem;
-    color: rgba(0,255,204,0.4);
+    color: #44445c;
     letter-spacing: 1px;
+}
+.credits-bottom {
+    margin-top: 20px;
+    font-size: 0.75rem;
+    color: #44445c;
 }
