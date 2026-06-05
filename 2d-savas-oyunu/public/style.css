@@ -1,0 +1,83 @@
+body {
+    margin: 0; padding: 0; background-color: #050508;
+    font-family: 'Segoe UI', sans-serif; color: white;
+    display: flex; justify-content: center; align-items: center;
+    height: 100vh; overflow: hidden; user-select: none;
+}
+
+.box {
+    background: #0d0d18; padding: 35px; border-radius: 16px;
+    border: 1px solid #00ffc8; box-shadow: 0 0 30px rgba(0, 255, 200, 0.15);
+    text-align: center; max-width: 650px; width: 100%;
+}
+
+h1 { color: #00ffc8; font-size: 32px; margin-top: 0; text-shadow: 0 0 10px rgba(0,255,192,0.4); }
+h3 { margin-top: 0; color: #00ffc8; border-bottom: 1px solid #1f1f33; padding-bottom: 8px;}
+
+input[type="text"], input[type="password"], input[type="number"], select {
+    padding: 12px; background: #040408; border: 1px solid #292942;
+    color: white; border-radius: 8px; outline: none; margin: 5px; font-size: 14px;
+}
+input:focus, select:focus { border-color: #00ffc8; }
+input:disabled, select:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.menu-actions { display: flex; justify-content: space-between; margin-top: 25px; gap: 20px;}
+.create-box, .list-box { flex: 1; background: #111122; padding: 20px; border-radius: 10px; }
+
+.checkbox-area { margin-top: 10px; font-size: 14px; color: #aaa; }
+
+#room-list { max-height: 180px; overflow-y: auto; margin-top: 10px; }
+.room-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #17172c; padding: 10px; margin-bottom: 8px; border-radius: 6px;
+}
+
+button {
+    padding: 12px 24px; background: #00ffc8; color: #050508;
+    border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;
+}
+button:hover { background: #00bfa5; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,255,192,0.3); }
+
+.lobby-container { display: flex; gap: 20px; text-align: left; margin-top: 20px; }
+.lobby-players-section { flex: 1; background: #111122; padding: 15px; border-radius: 8px; }
+.lobby-settings-section { flex: 1; background: #111122; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; }
+.lobby-settings-section label { font-size: 12px; color: #888; margin-top: 10px; }
+
+.lobby-player { background: #17172c; padding: 10px; margin: 6px 0; border-radius: 6px; font-weight: bold; }
+
+#game-timer {
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(13, 13, 24, 0.85); padding: 10px 25px; border-radius: 30px;
+    border: 1px solid #00ffc8; font-weight: bold; font-size: 18px; color: #00ffc8; z-index: 10;
+}
+
+#leaderboard {
+    position: absolute; top: 20px; right: 20px; background: rgba(10, 10, 18, 0.9);
+    padding: 15px; border-radius: 8px; border: 1px solid #00ffc8; width: 180px; z-index: 10;
+}
+.score-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px;}
+
+canvas { background: #030305; border: 2px solid #00ffc8; border-radius: 12px; }
+
+#victory-screen {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(4, 4, 8, 0.95); display: flex; justify-content: center;
+    align-items: center; z-index: 999; animation: fadeIn 0.5s ease-out forwards;
+}
+.victory-card {
+    background: #0e0e1c; padding: 40px 60px; border-radius: 20px;
+    border: 2px solid #00ffc8; text-align: center; box-shadow: 0 0 50px rgba(0, 255, 192, 0.3);
+    animation: scaleUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+#winner-name-box {
+    font-size: 42px; font-weight: bold; text-transform: uppercase;
+    margin-top: 20px; animation: pulseGlow 1.5s infinite;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleUp { from { transform: scale(0.7); opacity:0; } to { transform: scale(1); opacity:1; } }
+@keyframes pulseGlow {
+    0% { transform: scale(1); text-shadow: 0 0 10px currentColor; }
+    50% { transform: scale(1.05); text-shadow: 0 0 30px currentColor; }
+    100% { transform: scale(1); text-shadow: 0 0 10px currentColor; }
+}

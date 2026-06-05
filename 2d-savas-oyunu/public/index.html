@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Çok Oyunculu Turnuva Arenası</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+
+    <div id="name-screen" class="box">
+        <h1>SAVAŞ ARENASI</h1>
+        <p>Gelişmiş özelleştirilebilir turnuva moduna hoş geldin!</p>
+        <input type="text" id="username-input" placeholder="Karakter Adı..." maxlength="12">
+        <br><br>
+        <button id="save-name-btn">Giriş Yap</button>
+    </div>
+
+    <div id="menu-screen" class="box" style="display: none;">
+        <h2 style="color: #00ffc8; margin-top:0;">KAPTAN: <span id="hello-username" style="color:#fff;"></span></h2>
+        
+        <div class="menu-actions">
+            <div class="create-box">
+                <h3>Oda Oluştur</h3>
+                <input type="text" id="room-name" placeholder="Oda Adı...">
+                <div class="checkbox-area">
+                    <label><input type="checkbox" id="is-private"> Gizli Şifreli Oda</label>
+                </div>
+                <div id="password-wrapper" style="display: none; margin-top: 10px;">
+                    <input type="password" id="room-pass" placeholder="Oda Şifresi...">
+                </div>
+                <button id="create-btn" style="margin-top: 15px;">Odayı Kur</button>
+            </div>
+            
+            <div class="list-box">
+                <h3>Aktif Odalar</h3>
+                <div id="room-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="lobby-screen" class="box" style="display: none;">
+        <h2 id="lobby-title">Oda: Lobi</h2>
+        
+        <div class="lobby-container">
+            <div class="lobby-players-section">
+                <h3>Oyuncular:</h3>
+                <div id="lobby-players"></div>
+            </div>
+
+            <div class="lobby-settings-section">
+                <h3>Turnuva Özelleştirme</h3>
+                
+                <label>Harita Boyutu (Piksel):</label>
+                <input type="number" id="map-size-input" value="2000" min="1000" max="200000" placeholder="Örn: 100000" disabled>
+
+                <label>Gemi İtki Hızı:</label>
+                <select id="player-speed-select" disabled>
+                    <option value="4">Yavaş</option>
+                    <option value="6" selected>Normal</option>
+                    <option value="10">Işık Hızı</option>
+                </select>
+
+                <label>Oyun Süresi:</label>
+                <select id="game-duration-select" disabled>
+                    <option value="60">1 Dakika</option>
+                    <option value="180" selected>3 Dakika</option>
+                    <option value="300">5 Dakika</option>
+                    <option value="600">10 Dakika</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-top: 25px;">
+            <p id="wait-msg" style="color: #aaa;">Oda kurucusunun savaşı başlatması bekleniyor...</p>
+            <button id="start-game-btn" style="display: none; background: #00ffc8;">SAVAŞI BAŞLAT</button>
+        </div>
+    </div>
+
+    <div id="game-timer" style="display: none;">KALAN SÜRE: 00:00</div>
+
+    <div id="leaderboard" style="display: none;">
+        <h3>KİLL SKORLARI</h3>
+        <div id="scores"></div>
+    </div>
+
+    <div id="victory-screen" style="display: none;">
+        <div class="victory-card">
+            <h1 class="glow-text">SAVAŞ BİTTİ</h1>
+            <p>Arenanın En Büyük Savaşçısı İlan Edildi:</p>
+            <div id="winner-name-box">BİLİNMİYOR</div>
+            <p id="winner-kills-box" style="color: #aaa; font-size: 18px; margin-top: 10px;">0 Leş ile Kazandı</p>
+            <button id="return-menu-btn" style="margin-top: 25px;">Ana Menüye Dön</button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="600" style="display:none;"></canvas>
+
+    <script src="main.js"></script>
+</body>
+</html>
