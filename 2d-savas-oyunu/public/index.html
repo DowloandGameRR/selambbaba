@@ -3,45 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Savaş Arenası 2D - Turnuva Sürümü</title>
+    <title>2D Savaş Arenası</title>
     <link rel="stylesheet" href="style.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-    <div class="bg-animate"></div>
-
+    <!-- AYARLAR BUTONU -->
     <button id="settingsBtn" class="icon-btn">⚙️</button>
 
+    <!-- AYARLAR MODAL -->
     <div id="settingsModal" class="modal hidden">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h2>⚙️ AYARLAR</h2>
+            <h2>AYARLAR</h2>
             <div class="setting-item">
-                <label for="settingVolume">Oyun Sesi:</label>
+                <label>Oyun Sesleri</label>
                 <button id="settingVolume" class="btn btn-secondary">Açık (Mute)</button>
             </div>
             <div class="setting-item">
-                <label for="settingColor">Karakter Rengini Değiştir:</label>
+                <label>Karakter Rengin</label>
                 <input type="color" id="settingColor" value="#00ffcc">
             </div>
             <div class="credits-bottom">Created by Rüzgar</div>
         </div>
     </div>
 
-    <div id="loginScreen" class="container">
-        <h1 class="neon-text">SAVAŞ ARENASI</h1>
+    <!-- İSİM SEÇME EKRANI (İLK GİRİŞ) -->
+    <div id="nameScreen" class="container">
+        <h1>SAVAŞ ARENASI</h1>
         <div class="card">
             <div class="input-group">
-                <label>Kullanıcı Adın</label>
-                <input type="text" id="usernameInput" placeholder="Savaşçı Adı giriniz..." maxlength="15">
+                <label for="usernameInput">Savaşçı Adını Gir:</label>
+                <input type="text" id="usernameInput" placeholder="İsim zorunludur..." maxlength="12">
             </div>
+            <button id="saveNameBtn" class="btn btn-primary">Giriş Yap</button>
+        </div>
+        <div class="footer-signature">Created by Rüzgar</div>
+    </div>
+
+    <!-- ANA MENÜ / ODA PANELİ -->
+    <div id="loginScreen" class="container hidden">
+        <h1>SAVAŞ ARENASI</h1>
+        <div class="card">
             <div class="room-actions">
                 <div class="box">
-                    <h3>Oda Oluştur</h3>
+                    <h3>Yeni Oda Kur</h3>
                     <input type="text" id="newRoomName" placeholder="Oda Adı">
                     <input type="password" id="newRoomPass" placeholder="Şifre (İsteğe bağlı)">
-                    <button id="createRoomBtn" class="btn btn-primary">Odayı Kur</button>
+                    <button id="createRoomBtn" class="btn btn-primary">Odayı Oluştur</button>
                 </div>
                 <div class="box">
                     <h3>Aktif Odalar</h3>
@@ -54,38 +64,40 @@
         <div class="footer-signature">Created by Rüzgar</div>
     </div>
 
+    <!-- ODA LOBİSİ -->
     <div id="lobbyScreen" class="container hidden">
-        <h1 id="lobbyTitle" class="neon-text">ODA LOBİSİ</h1>
-        <div class="card lobby-card">
-            <div class="players-list-section">
-                <h3>Odadaki Oyuncular</h3>
-                <div id="playerList" class="player-grid"></div>
-            </div>
+        <h1 id="lobbyTitle">ODA LOBİSİ</h1>
+        <div class="card">
+            <h3>Odadaki Oyuncular (Maks 4)</h3>
+            <div id="playerList" class="player-grid"></div>
             <div class="lobby-controls">
                 <button id="startGameBtn" class="btn btn-success hidden">Oyunu Başlat</button>
-                <button id="leaveRoomBtn" class="btn id-danger">Odadan Çık</button>
+                <button id="leaveRoomBtn" class="btn btn-danger">Odadan Çık</button>
             </div>
         </div>
     </div>
 
+    <!-- OYUN SAHASI -->
     <div id="gameScreen" class="hidden">
         <div id="uiContainer">
-            <div id="scoreBoard">Skorlar yüklenecektir...</div>
+            <div id="scoreBoard">Skorlar yükleniyor...</div>
         </div>
         <canvas id="gameCanvas" width="1000" height="600"></canvas>
     </div>
 
+    <!-- ENTEGRE GLOBAL CHAT -->
     <div id="chatWrapper" class="chat-wrapper hidden">
         <div id="chatBox" class="chat-box"></div>
         <div class="chat-input-area">
-            <input type="text" id="chatInput" placeholder="Mesaj yazmak için 'Enter'a basın..." maxlength="60">
+            <input type="text" id="chatInput" placeholder="Mesaj için 'Enter' basın..." maxlength="50">
         </div>
     </div>
 
+    <!-- OYUN BİTTİ POPUP -->
     <div id="gameOverScreen" class="popup-overlay hidden">
         <div class="popup-box">
-            <h2 id="winnerText" class="neon-text-red">ZAFER!</h2>
-            <p>Oda lobisine geri dönülüyor, tekrar kapışmaya hazır olun...</p>
+            <h2 id="winnerText">ZAFER!</h2>
+            <p>Oda lobisine otomatik dönülüyor, hazırlanın...</p>
         </div>
     </div>
 
