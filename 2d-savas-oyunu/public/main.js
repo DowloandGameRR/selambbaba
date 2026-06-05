@@ -1,5 +1,5 @@
 // Sunucu adresi kontrolü: Localhost ise yerel sunucuya, değilse Render linkine otomatik yönlenir.
-const socket = io(window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://RENDER_SUNUCU_LINKINIZI_BURAYA_KOYUN.onrender.com'); 
+const socket = io(window.location.hostname === 'localhost' ? 'http://localhost:3000' : 'https://selambbaba.onrender.com'); 
 
 // Ekranlar
 const nameScreen = document.getElementById('name-screen');
