@@ -1,293 +1,170 @@
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
-const io = require('socket.io')(http, { 
-    cors: { 
-        origin: "*",
-        methods: ["GET", "POST"]
-    } 
+const io = require('socket.io')(http, {
+    cors: { origin: "*" }
 });
+const path = require('path');
 
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-let rooms = {}; 
-
-// GÜVENLİ SPAWN NOKTASI BULMA FONKSİYONU
-function getSafeSpawnPoint(room) {
-    let mapSize = room.mapSize;
-    let safeX = Math.random() * (mapSize - 400) + 200;
-    let safeY = Math.random() * (mapSize - 400) + 200;
-    let attempts = 0;
-    let isSafe = false;
-
-    while (!isSafe && attempts < 50) {
-        isSafe = true;
-        let playersArr = Object.values(room.players);
-        
-        for (let p of playersArr) {
-            let dx = safeX - p.x;
-            let dy = safeY - p.y;
-            let distance = Math.sqrt(dx * dx + dy * dy);
-            
-            // Eğer başka bir oyuncuya 250 pikselden daha yakınsa koordinat güvenli değildir
-            if (distance < 250) {
-                isSafe = false;
-                safeX = Math.random() * (mapSize - 400) + 200;
-                safeY = Math.random() * (mapSize - 400) + 200;
-                break;
-            }
-        }
-        attempts++;
-    }
-    return { x: safeX, y: safeY };
-}
+const rooms = {};
 
 io.on('connection', (socket) => {
-    console.log('Kullanıcı bağlandı:', socket.id);
+    console.log('Bir kullanıcı bağlandı:', socket.id);
 
     socket.on('getRooms', () => {
-        socket.emit('roomListUpdate', getCleanRoomList());
+        socket.emit('roomList', Object.keys(rooms).map(name => ({
+            name,
+            players: rooms[name].players.length,
+            started: rooms[name].started
+        })));
     });
 
-    socket.on('createRoom', (data) => {
-        let roomId = 'room_' + Math.random().toString(36).substring(2, 9);
-        
-        rooms[roomId] = {
-            id: roomId,
-            name: data.roomName,
-            password: data.isPrivate ? data.password : null,
-            isPrivate: data.isPrivate,
-            hostId: socket.id,
-            started: false,
-            gameOver: false,
-            mapSize: 2000,       
-            playerSpeed: 6,     
-            gameDuration: 180, 
-            timeLeft: 180,
-            timerInterval: null,
-            players: {},
-            bullets: []
-        };
-
-        socket.emit('roomCreated', roomId);
-        io.emit('roomListUpdate', getCleanRoomList());
+    socket.on('createRoom', ({ roomName, password }) => {
+        if (rooms[roomName]) {
+            socket.emit('errorMsg', 'Bu oda zaten mevcut!');
+            return;
+        }
+        rooms[roomName] = { password, players: [], started: false, state: {} };
+        io.emit('roomList', Object.keys(rooms).map(name => ({
+            name,
+            players: rooms[name].players.length,
+            started: rooms[name].started
+        })));
+        socket.emit('roomCreated', roomName);
     });
 
-    socket.on('joinRoom', (data) => {
-        let room = rooms[data.roomId];
-        if (!room) return socket.emit('errorMsg', 'Oda bulunamadı!');
-        if (room.started) return socket.emit('errorMsg', 'Oyun çoktan başladı!');
-        if (room.isPrivate && room.password !== data.password) return socket.emit('errorMsg', 'Hatalı şifre!');
+    socket.on('joinRoom', ({ roomName, password, username, color }) => {
+        const room = rooms[roomName];
+        if (!room) {
+            socket.emit('errorMsg', 'Oda bulunamadı!');
+            return;
+        }
+        if (room.password && room.password !== password) {
+            socket.emit('errorMsg', 'Hatalı oda şifresi!');
+            return;
+        }
+        if (room.players.length >= 4) {
+            socket.emit('errorMsg', 'Oda dolu! (Maks 4 oyuncu)');
+            return;
+        }
+        if (room.started) {
+            socket.emit('errorMsg', 'Oyun zaten başladı!');
+            return;
+        }
 
-        socket.join(data.roomId);
-        socket.roomId = data.roomId;
-
-        let spawn = getSafeSpawnPoint(room);
-
-        room.players[socket.id] = {
+        socket.join(roomName);
+        const playerObj = {
             id: socket.id,
-            username: data.username,
-            x: spawn.x,
-            y: spawn.y,
-            color: '#' + Math.floor(Math.random()*16777215).toString(16),
-            kills: 0,
+            username: username || 'Oyuncu',
+            color: color || '#00ffcc',
+            x: 100 + (room.players.length * 150),
+            y: 300,
             hp: 100,
-            isHost: room.hostId === socket.id
+            score: 0
         };
+        room.players.push(playerObj);
+        socket.roomName = roomName;
 
-        io.to(data.roomId).emit('lobbyUpdate', {
-            players: room.players,
-            myId: socket.id,
-            hostId: room.hostId,
-            roomName: room.name,
-            mapSize: room.mapSize,
-            playerSpeed: room.playerSpeed,
-            gameDuration: room.gameDuration
-        });
-        
-        io.emit('roomListUpdate', getCleanRoomList());
+        io.to(roomName).emit('roomData', room.players);
+        io.emit('roomList', Object.keys(rooms).map(name => ({
+            name,
+            players: rooms[name].players.length,
+            started: rooms[name].started
+        })));
     });
 
-    socket.on('updateLobbySettings', (data) => {
-        let roomId = socket.roomId;
-        if (rooms[roomId] && rooms[roomId].hostId === socket.id) {
-            rooms[roomId].mapSize = Math.max(1000, Math.min(200000, parseInt(data.mapSize) || 2000));
-            rooms[roomId].playerSpeed = parseInt(data.playerSpeed);
-            rooms[roomId].gameDuration = parseInt(data.gameDuration);
-            rooms[roomId].timeLeft = rooms[roomId].gameDuration;
-            
-            io.to(roomId).emit('settingsUpdated', {
-                mapSize: rooms[roomId].mapSize,
-                playerSpeed: rooms[roomId].playerSpeed,
-                gameDuration: rooms[roomId].gameDuration
-            });
+    socket.on('chatMessage', (msg) => {
+        if (socket.roomName) {
+            const room = rooms[socket.roomName];
+            const player = room?.players.find(p => p.id === socket.id);
+            const sender = player ? player.username : 'Sistem';
+            io.to(socket.roomName).emit('newChatMessage', { sender, msg });
         }
     });
 
     socket.on('startGame', () => {
-        let roomId = socket.roomId;
-        let room = rooms[roomId];
-        if (room && room.hostId === socket.id && !room.started) {
-            room.started = true;
-            room.gameOver = false;
-            room.timeLeft = room.gameDuration;
-
-            room.timerInterval = setInterval(() => {
-                if (!room) return;
-                room.timeLeft--;
-                
-                io.to(roomId).emit('timerUpdate', room.timeLeft);
-
-                if (room.timeLeft <= 0) {
-                    clearInterval(room.timerInterval);
-                    room.gameOver = true;
-                    
-                    let playerArr = Object.values(room.players);
-                    let winner = { username: "Hiç kimse", kills: 0, color: "#fff" };
-                    if (playerArr.length > 0) {
-                        playerArr.sort((a,b) => b.kills - a.kills);
-                        winner = playerArr[0];
-                    }
-
-                    io.to(roomId).emit('matchEnded', {
-                        winnerName: winner.username,
-                        winnerKills: winner.kills,
-                        winnerColor: winner.color
-                    });
-                }
-            }, 1000);
-
-            Object.keys(room.players).forEach(pId => {
-                let sPoint = getSafeSpawnPoint(room);
-                room.players[pId].x = sPoint.x;
-                room.players[pId].y = sPoint.y;
-                room.players[pId].hp = 100;
-                room.players[pId].kills = 0;
-            });
-
-            io.to(roomId).emit('gameStarted', {
-                players: room.players,
-                mapSize: room.mapSize
-            });
-            io.emit('roomListUpdate', getCleanRoomList());
+        const roomName = socket.roomName;
+        if (rooms[roomName]) {
+            rooms[roomName].started = true;
+            io.to(roomName).emit('gameStarted');
+            io.emit('roomList', Object.keys(rooms).map(name => ({
+                name,
+                players: rooms[name].players.length,
+                started: rooms[name].started
+            })));
         }
     });
 
-    socket.on('playerMove', (keys) => {
-        let roomId = socket.roomId;
-        if (!roomId || !rooms[roomId] || !rooms[roomId].players[socket.id] || rooms[roomId].gameOver) return;
-
-        let room = rooms[roomId];
-        let player = room.players[socket.id];
-        let speed = room.playerSpeed;
-
-        if (keys.w) player.y -= speed;
-        if (keys.s) player.y += speed;
-        if (keys.a) player.x -= speed;
-        if (keys.d) player.x += speed;
-
-        player.x = Math.max(40, Math.min(room.mapSize - 40, player.x));
-        player.y = Math.max(40, Math.min(room.mapSize - 40, player.y));
-
-        io.to(roomId).emit('playerMoved', player);
+    socket.on('playerMove', (data) => {
+        const room = rooms[socket.roomName];
+        if (room && room.started) {
+            const player = room.players.find(p => p.id === socket.id);
+            if (player && player.hp > 0) {
+                player.x = data.x;
+                player.y = data.y;
+                socket.to(socket.roomName).emit('playerUpdated', player);
+            }
+        }
     });
 
-    socket.on('shoot', (shootData) => {
-        let roomId = socket.roomId;
-        if (!roomId || !rooms[roomId] || !rooms[roomId].players[socket.id] || rooms[roomId].gameOver) return;
+    socket.on('fireBullet', (bulletData) => {
+        socket.to(socket.roomName).emit('bulletSpawned', { ...bulletData, owner: socket.id });
+    });
 
-        rooms[roomId].bullets.push({
-            owner: socket.id,
-            x: rooms[roomId].players[socket.id].x,
-            y: rooms[roomId].players[socket.id].y,
-            dirX: shootData.dirX,
-            dirY: shootData.dirY,
-            speed: 15,
-            id: Math.random()
-        });
+    socket.on('bulletHit', ({ targetId }) => {
+        const room = rooms[socket.roomName];
+        if (room && room.started) {
+            const target = room.players.find(p => p.id === targetId);
+            const attacker = room.players.find(p => p.id === socket.id);
+            
+            if (target && target.hp > 0) {
+                target.hp -= 10;
+                if (target.hp <= 0) {
+                    target.hp = 0;
+                    if (attacker) attacker.score += 1;
+                }
+                io.to(socket.roomName).emit('roomData', room.players);
+                
+                const alivePlayers = room.players.filter(p => p.hp > 0);
+                if (alivePlayers.length <= 1 && room.players.length > 1) {
+                    const winner = alivePlayers[0] ? alivePlayers[0].username : 'Kimse';
+                    io.to(socket.roomName).emit('gameOver', { winner });
+                    // Odayı sıfırla
+                    room.started = false;
+                    room.players.forEach(p => { p.hp = 100; p.x = 200; p.y = 300; });
+                }
+            }
+        }
     });
 
     socket.on('disconnect', () => {
-        let roomId = socket.roomId;
-        if (roomId && rooms[roomId]) {
-            delete rooms[roomId].players[socket.id];
-            
-            if (Object.keys(rooms[roomId].players).length === 0) {
-                if (rooms[roomId].timerInterval) clearInterval(rooms[roomId].timerInterval);
-                delete rooms[roomId];
-            } else if (rooms[roomId].hostId === socket.id) {
-                let nextHost = Object.keys(rooms[roomId].players)[0];
-                rooms[roomId].hostId = nextHost;
-                rooms[roomId].players[nextHost].isHost = true;
-                
-                io.to(roomId).emit('lobbyUpdate', {
-                    players: rooms[roomId].players,
-                    myId: nextHost,
-                    hostId: rooms[roomId].hostId,
-                    roomName: rooms[roomId].name,
-                    mapSize: rooms[roomId].mapSize,
-                    playerSpeed: rooms[roomId].playerSpeed,
-                    gameDuration: rooms[roomId].gameDuration
-                });
+        if (socket.roomName && rooms[socket.roomName]) {
+            const room = rooms[socket.roomName];
+            room.players = room.players.filter(p => p.id !== socket.id);
+            if (room.players.length === 0) {
+                delete rooms[socket.roomName];
+            } else {
+                io.to(socket.roomName).emit('roomData', room.players);
+                if (room.started && room.players.filter(p => p.hp > 0).length <= 1) {
+                    const alive = room.players.filter(p => p.hp > 0)[0];
+                    io.to(socket.roomName).emit('gameOver', { winner: alive ? alive.username : 'Kimse' });
+                    room.started = false;
+                    room.players.forEach(p => p.hp = 100);
+                }
             }
-            io.to(roomId).emit('playerDisconnected', socket.id);
-            io.emit('roomListUpdate', getCleanRoomList());
+            io.emit('roomList', Object.keys(rooms).map(name => ({
+                name,
+                players: rooms[name].players.length,
+                started: rooms[name].started
+            })));
         }
+        console.log('Bir kullanıcı ayrıldı:', socket.id);
     });
 });
 
-function getCleanRoomList() {
-    return Object.values(rooms).map(r => ({
-        id: r.id,
-        name: r.name,
-        isPrivate: r.isPrivate,
-        playerCount: Object.keys(r.players).length,
-        started: r.started
-    }));
-}
-
-setInterval(() => {
-    Object.keys(rooms).forEach(roomId => {
-        let room = rooms[roomId];
-        if (!room.started || room.gameOver) return;
-
-        room.bullets.forEach((bullet, bIndex) => {
-            bullet.x += bullet.dirX * bullet.speed;
-            bullet.y += bullet.dirY * bullet.speed;
-
-            if (bullet.x < 0 || bullet.x > room.mapSize || bullet.y < 0 || bullet.y > room.mapSize) {
-                room.bullets.splice(bIndex, 1);
-                return;
-            }
-
-            Object.keys(room.players).forEach((pId) => {
-                if (bullet.owner !== pId) {
-                    let p = room.players[pId];
-                    let dx = bullet.x - p.x;
-                    let dy = bullet.y - p.y;
-
-                    if (Math.sqrt(dx*dx + dy*dy) < 30) {
-                        p.hp -= 20;
-                        room.bullets.splice(bIndex, 1);
-
-                        if (p.hp <= 0) {
-                            if (room.players[bullet.owner]) room.players[bullet.owner].kills += 1;
-                            
-                            let respawnPos = getSafeSpawnPoint(room);
-                            p.hp = 100;
-                            p.x = respawnPos.x;
-                            p.y = respawnPos.y;
-                        }
-                        io.to(roomId).emit('updateAllPlayers', room.players);
-                    }
-                }
-            });
-        });
-
-        io.to(roomId).emit('updateBullets', room.bullets);
-    });
-}, 1000 / 60);
-
-// PORT AYARI (Render/Cloud platform uyumluluğu için)
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Sunucu ${PORT} portunda başarıyla başlatıldı.`));
+http.listen(PORT, () => {
+    console.log(`Oyun sunucusu hazır! Port: ${PORT}`);
+});
